@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>步骤条与输入框示例（扩展划取功能）</title>
+    <title>长文本分段+限定词选择</title>
     <link rel="stylesheet" href="css/index.css">
     <link rel="stylesheet" href="libs/theme-chalk/index.css">
     <script src="js/vue.js"></script>
@@ -21,7 +21,6 @@
             box-sizing: border-box;
         }
 
-        /* 主容器增加 flex 布局，固定高度600px */
         .container {
             background: white;
             padding: 20px;
@@ -33,8 +32,6 @@
             display: flex;
             flex-direction: column;
         }
-
-        /* 内容区域：占据剩余空间，内容过多时滚动 */
         .step-content {
             flex: 1;
             overflow-y: auto;
@@ -49,7 +46,7 @@
             margin-top: 20px;
         }
 
-        /* 自定义按钮样式 */
+
         .el-button {
             background: linear-gradient(90deg, #007bff, #0056b3) !important;
             color: white !important;
@@ -113,10 +110,10 @@
             font-size: 15px;
             line-height: 1.5;
             height: 280px;
-            /* 调整输出区域高度 */
+
         }
 
-        /* 划取文本高亮显示 */
+
         .highlight {
             color: red !important;
         }
@@ -131,7 +128,7 @@
             color: #333;
         }
 
-        /* 步骤2文本显示区域 */
+
         .display-text {
             height: 200px;
             border: 1px solid black;
@@ -144,15 +141,12 @@
 
 <body>
     <div id="app" class="container">
-        <!-- 步骤条 -->
         <el-steps :active="activeStep">
             <el-step title="步骤 1" description="请输入文本内容"></el-step>
             <el-step title="步骤 2" description="文本拆分及段落选择"></el-step>
             <el-step title="步骤 3" description="选择限定词"></el-step>
         </el-steps>
-        <!-- 内容区域 -->
         <div class="step-content">
-            <!-- 步骤1：输入文本 -->
             <div v-if="activeStep === 0" class="input-group">
                 <div class="input-area">
                     <h3>请输入文本内容：</h3>
@@ -161,7 +155,6 @@
                     <el-button type="info" @click="clearUpload" style="margin-top: 20px;">清空上传</el-button>
                 </div>
             </div>
-            <!-- 步骤2：分页显示文本 -->
             <div v-if="activeStep === 1">
                 <div class="navigation-buttons" style="margin-top:20px;">
                     <el-button type="primary" @click="goFirstStep" style="margin-left: 750px;">返回步骤一（文本输入）</el-button>
@@ -179,7 +172,6 @@
                 </div>
                 <el-button type="primary" @click="nextStep">选择当前段落进入限定词选取</el-button>
             </div>
-            <!-- 步骤3：划取与复制文本 -->
             <div v-if="activeStep === 2">
                 <div class="navigation-buttons" style="margin-top:20px;">
                     <el-button type="primary" @click="goFirstStep" style="margin-left: 750px;">返回步骤一（文本输入）</el-button>
@@ -210,19 +202,18 @@
             el: '#app',
             data() {
                 return {
-                    activeStep: 0,          // 当前步骤（0:输入；1:分页；2:划取复制）
-                    inputText: '',          // 输入的文本
-                    paginatedText: [],      // 拆分后的文本数组（分页显示使用）
-                    currentPage: 0,         // 当前页面（从0开始）
-                    selectedTexts: [],      // 记录划取的限定词
-                    wrapWithBrackets: true  // 是否用中括号包裹限定词
+                    activeStep: 0,          
+                    inputText: '',          
+                    paginatedText: [],      
+                    currentPage: 0,        
+                    selectedTexts: [],      
+                    wrapWithBrackets: true  
                 };
             },
             computed: {
                 totalPages() {
                     return this.paginatedText.length;
                 },
-                // 步骤3：展示文本，并将已划取部分用红色高亮显示
                 formattedOutputText() {
                     let text = this.paginatedText[this.currentPage] || '';
                     this.selectedTexts.forEach(sel => {
@@ -234,7 +225,6 @@
                     });
                     return text;
                 },
-                // 拼接所有划取的限定词，判断是否用中括号包裹
                 formattedSelectedText() {
                     let joinedText = this.selectedTexts.join(' ');
                     return this.wrapWithBrackets ? `[${joinedText}]` : joinedText;
@@ -242,7 +232,6 @@
                 selectedCount() {
                     return this.selectedTexts.length;
                 },
-                // 当前显示文本与划取文本的总字符数
                 totalLength() {
                     const currentText = this.paginatedText[this.currentPage] || '';
                     let displayedLen = Array.from(currentText).length;
@@ -264,8 +253,6 @@
                         this.$message.warning('请输入内容');
                     }
                 },
-                /* 优化后的拆分逻辑：尽量按句子结束符（。！？.?!）拆分，
-                   如未找到则直接按目标长度拆分 */
                 splitText(text, maxLength) {
                     const result = [];
                     const sentenceEndRegex = /[。！？.?!]/;
