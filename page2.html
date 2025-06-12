@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="zh">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>步骤条与输入框示例（扩展划取功能）</title>
+    <link rel="stylesheet" href="css/index.css">
+    <link rel="stylesheet" href="libs/theme-chalk/index.css">
+    <script src="js/vue.js"></script>
+    <script src="libs/index.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        /* 主容器增加 flex 布局，固定高度600px */
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            width: 1000px;
+            height: 800px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 内容区域：占据剩余空间，内容过多时滚动 */
+        .step-content {
+            flex: 1;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .input-area {
+            margin-top: 20px;
+        }
+
+        /* 自定义按钮样式 */
+        .el-button {
+            background: linear-gradient(90deg, #007bff, #0056b3) !important;
+            color: white !important;
+            padding: 8px 12px !important;
+            border: none !important;
+            border-radius: 4px !important;
+            cursor: pointer !important;
+            width: auto !important;
+            /* margin-top: 20px; */
+            transition: none !important;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2) !important;
+            font-size: 14px !important;
+        }
+
+        button:hover,
+        .el-button:hover {
+            background: linear-gradient(90deg, #007bff, #0056b3) !important;
+            transform: none !important;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2) !important;
+        }
+
+        button:active,
+        .el-button:active {
+            background: linear-gradient(90deg, #007bff, #0056b3) !important;
+            transform: none !important;
+            box-shadow: none !important;
+            outline: none !important;
+        }
+
+        .pagination {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .pagination button {
+            color: white;
+            margin: 0 5px;
+            padding: 5px 10px;
+            border-radius: 4px;
+            border: 1px solid #007bff;
+            background: #007bff !important;
+            cursor: pointer;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .pagination button.active {
+            border: 1px solid #d32998;
+            background-color: #d32998 !important;
+        }
+
+        /* 输出区域 */
+        #outputText {
+            border: 1px solid #dcdfe6;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            overflow-y: auto;
+            font-family: Microsoft YaHei;
+            font-size: 15px;
+            line-height: 1.5;
+            height: 280px;
+            /* 调整输出区域高度 */
+        }
+
+        /* 划取文本高亮显示 */
+        .highlight {
+            color: red !important;
+        }
+
+        .selected-text {
+            margin-top: 20px;
+        }
+
+        .count-info {
+            margin-top: 15px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        /* 步骤2文本显示区域 */
+        .display-text {
+            height: 200px;
+            border: 1px solid black;
+            padding: 10px;
+            border-radius: 10px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app" class="container">
+        <!-- 步骤条 -->
+        <el-steps :active="activeStep">
+            <el-step title="步骤 1" description="请输入文本内容"></el-step>
+            <el-step title="步骤 2" description="文本拆分及段落选择"></el-step>
+            <el-step title="步骤 3" description="选择限定词"></el-step>
+        </el-steps>
+        <!-- 内容区域 -->
+        <div class="step-content">
+            <!-- 步骤1：输入文本 -->
+            <div v-if="activeStep === 0" class="input-group">
+                <div class="input-area">
+                    <h3>请输入文本内容：</h3>
+                    <el-input type="textarea" placeholder="请输入内容" v-model="inputText" rows="12"></el-input>
+                    <el-button type="primary" @click="submitText" style="margin-top: 20px;">提交</el-button>
+                    <el-button type="info" @click="clearUpload" style="margin-top: 20px;">清空上传</el-button>
+                </div>
+            </div>
+            <!-- 步骤2：分页显示文本 -->
+            <div v-if="activeStep === 1">
+                <div class="navigation-buttons" style="margin-top:20px;">
+                    <el-button type="primary" @click="goFirstStep" style="margin-left: 750px;">返回步骤一（文本输入）</el-button>
+                </div>
+                <p>文本拆分结果:</p>
+                <el-button type="success" @click="copyPageText" style="margin-top: 0px;margin-bottom: 10px;">复制当前页文本</el-button>
+                <div class="display-text">
+                    {{ paginatedText[currentPage] }}
+                </div>
+                <div class="pagination">
+                    <button v-for="(item, index) in totalPages" :key="index" :class="{ active: currentPage === index }"
+                        @click="changePage(index)">
+                        {{ index + 1 }}
+                    </button>
+                </div>
+                <el-button type="primary" @click="nextStep">选择当前段落进入限定词选取</el-button>
+            </div>
+            <!-- 步骤3：划取与复制文本 -->
+            <div v-if="activeStep === 2">
+                <div class="navigation-buttons" style="margin-top:20px;">
+                    <el-button type="primary" @click="goFirstStep" style="margin-left: 750px;">返回步骤一（文本输入）</el-button>
+                    <el-button type="primary" @click="prevStep" style="margin-left: 0px;">返回上一步（段落选取）</el-button>
+                </div>
+                <el-checkbox v-model="wrapWithBrackets" style="margin-top: 5px;;">是否使用‘[ ]’包裹限定词</el-checkbox>
+                <h3 style="margin-top: 10px;">在以下文本框中使用鼠标划取限定词：</h3>
+                <pre id="outputText" @mouseup="extractSelectedText">
+<code v-html="formattedOutputText"></code>
+        </pre>
+                <div class="selected-text">
+                    <h3>划取的内容：</h3>
+                    <el-input  type="text" :value="formattedSelectedText" readonly placeholder="划取的文本将显示在这里"></el-input>
+                    <el-button style="margin-top: 5px;" type="success" @click="copyToClipboard">复制限定词结果</el-button>
+                    <el-button style="margin-top: 5px;" type="danger" @click="undoSelection">撤销上一个划取</el-button>
+                    <el-button style="margin-top: 5px;" type="warning" @click="clearSelections">清空所有划取</el-button>
+                    <el-button style="margin-top: 5px;" v-if="wrapWithBrackets" type="primary" @click="copyFullContent">复制完整内容</el-button>
+                    <div class="count-info">
+                        已划取的限定词数量: {{ selectedCount }}<br>
+                        限定词与当前显示文本总长度: {{ totalLength }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        new Vue({
+            el: '#app',
+            data() {
+                return {
+                    activeStep: 0,          // 当前步骤（0:输入；1:分页；2:划取复制）
+                    inputText: '',          // 输入的文本
+                    paginatedText: [],      // 拆分后的文本数组（分页显示使用）
+                    currentPage: 0,         // 当前页面（从0开始）
+                    selectedTexts: [],      // 记录划取的限定词
+                    wrapWithBrackets: true  // 是否用中括号包裹限定词
+                };
+            },
+            computed: {
+                totalPages() {
+                    return this.paginatedText.length;
+                },
+                // 步骤3：展示文本，并将已划取部分用红色高亮显示
+                formattedOutputText() {
+                    let text = this.paginatedText[this.currentPage] || '';
+                    this.selectedTexts.forEach(sel => {
+                        if (sel) {
+                            const escapedSel = sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                            const re = new RegExp(escapedSel, 'g');
+                            text = text.replace(re, `<span class="highlight">${sel}</span>`);
+                        }
+                    });
+                    return text;
+                },
+                // 拼接所有划取的限定词，判断是否用中括号包裹
+                formattedSelectedText() {
+                    let joinedText = this.selectedTexts.join(' ');
+                    return this.wrapWithBrackets ? `[${joinedText}]` : joinedText;
+                },
+                selectedCount() {
+                    return this.selectedTexts.length;
+                },
+                // 当前显示文本与划取文本的总字符数
+                totalLength() {
+                    const currentText = this.paginatedText[this.currentPage] || '';
+                    let displayedLen = Array.from(currentText).length;
+                    let rawSelected = this.selectedTexts.join(' ');
+                    if (this.wrapWithBrackets) {
+                        rawSelected = '[' + rawSelected + ']';
+                    }
+                    let selectedLen = Array.from(rawSelected).length;
+                    return displayedLen + selectedLen;
+                }
+            },
+            methods: {
+                submitText() {
+                    if (this.inputText) {
+                        this.paginatedText = this.splitText(this.inputText, 470);
+                        this.currentPage = 0;
+                        this.activeStep = 1;
+                    } else {
+                        this.$message.warning('请输入内容');
+                    }
+                },
+                /* 优化后的拆分逻辑：尽量按句子结束符（。！？.?!）拆分，
+                   如未找到则直接按目标长度拆分 */
+                splitText(text, maxLength) {
+                    const result = [];
+                    const sentenceEndRegex = /[。！？.?!]/;
+                    let start = 0;
+                    while (start < text.length) {
+                        if (text.length - start <= maxLength) {
+                            result.push(text.slice(start));
+                            break;
+                        }
+                        let subStr = text.slice(start, start + maxLength);
+                        let splitPos = -1;
+                        for (let i = subStr.length - 1; i >= 0; i--) {
+                            if (sentenceEndRegex.test(subStr[i])) {
+                                splitPos = i;
+                                break;
+                            }
+                        }
+                        if (splitPos === -1) {
+                            result.push(subStr);
+                            start += maxLength;
+                        } else {
+                            result.push(text.slice(start, start + splitPos + 1));
+                            start += splitPos + 1;
+                        }
+                    }
+                    return result;
+                },
+                changePage(index) {
+                    this.currentPage = index;
+                },
+                nextStep() {
+                    this.activeStep = 2;
+                },
+                clearUpload() {
+                    this.inputText = '';
+                    this.paginatedText = [];
+                    this.selectedTexts = [];
+                    this.currentPage = 0;
+                    this.activeStep = 0;
+                },
+                extractSelectedText() {
+                    const selection = window.getSelection();
+                    const selected = selection.toString().trim();
+                    if (selected && !this.selectedTexts.includes(selected)) {
+                        this.selectedTexts.push(selected);
+                    }
+                    selection.removeAllRanges();
+                },
+                undoSelection() {
+                    this.selectedTexts.pop();
+                },
+                clearSelections() {
+                    this.selectedTexts = [];
+                },
+                copyToClipboard() {
+                    const textToCopy = this.formattedSelectedText;
+                    navigator.clipboard.writeText(textToCopy).then(() => {
+                        this.$message.success('复制限定词结果成功！');
+                    }).catch(err => {
+                        console.error('复制失败:', err);
+                        this.$message.error('复制失败，请手动复制。');
+                    });
+                },
+                copyFullContent() {
+                    let baseText = this.paginatedText[this.currentPage] || '';
+                    let textToCopy = this.formattedSelectedText + baseText;
+                    navigator.clipboard.writeText(textToCopy).then(() => {
+                        this.$message.success('复制完整内容成功！');
+                    }).catch(err => {
+                        console.error('复制失败:', err);
+                        this.$message.error('复制失败，请手动复制。');
+                    });
+                },
+                copyPageText() {
+                    let pageText = this.paginatedText[this.currentPage] || '';
+                    navigator.clipboard.writeText(pageText).then(() => {
+                        this.$message.success('复制当前页文本成功！');
+                    }).catch(err => {
+                        console.error('复制失败:', err);
+                        this.$message.error('复制失败，请手动复制。');
+                    });
+                },
+                prevStep() {
+                    if (this.activeStep > 0) {
+                        this.activeStep--;
+                    } else {
+                        this.$message.info("已经是第一步");
+                    }
+                },
+                goFirstStep() {
+                    this.activeStep = 0;
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>
