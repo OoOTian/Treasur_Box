@@ -2,11 +2,11 @@
 <html lang="zh">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>文本分段+限定词选择</title>
-    <link rel="stylesheet" href="css/index.css">
-    <link rel="stylesheet" href="libs/theme-chalk/index.css">
+    <link rel="stylesheet" href="css/index.css" />
+    <link rel="stylesheet" href="libs/theme-chalk/index.css" />
     <script src="js/vue.js"></script>
     <script src="libs/index.js"></script>
     <style>
@@ -32,6 +32,7 @@
             display: flex;
             flex-direction: column;
         }
+
         .step-content {
             flex: 1;
             overflow-y: auto;
@@ -46,7 +47,6 @@
             margin-top: 20px;
         }
 
-
         .el-button {
             background: linear-gradient(90deg, #007bff, #0056b3) !important;
             color: white !important;
@@ -55,7 +55,6 @@
             border-radius: 4px !important;
             cursor: pointer !important;
             width: auto !important;
-            /* margin-top: 20px; */
             transition: none !important;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2) !important;
             font-size: 14px !important;
@@ -80,6 +79,7 @@
             margin-top: 20px;
             display: flex;
             justify-content: center;
+            align-items: center;
         }
 
         .pagination button {
@@ -98,7 +98,12 @@
             background-color: #d32998 !important;
         }
 
-        /* 输出区域 */
+        .pagination button:disabled {
+            background-color: #cccccc !important;
+            border-color: #cccccc;
+            cursor: not-allowed;
+        }
+
         #outputText {
             border: 1px solid #dcdfe6;
             padding: 10px;
@@ -110,9 +115,8 @@
             font-size: 15px;
             line-height: 1.5;
             height: 280px;
-
+            margin-top: 15px;
         }
-
 
         .highlight {
             color: red !important;
@@ -128,13 +132,8 @@
             color: #333;
         }
 
-
-        .display-text {
-            height: 200px;
-            border: 1px solid black;
-            padding: 10px;
-            border-radius: 10px;
-            overflow-y: auto;
+        .operate-buttons {
+            margin-top: 10px;
         }
     </style>
 </head>
@@ -143,8 +142,7 @@
     <div id="app" class="container">
         <el-steps :active="activeStep">
             <el-step title="步骤 1" description="请输入文本内容"></el-step>
-            <el-step title="步骤 2" description="文本拆分及段落选择"></el-step>
-            <el-step title="步骤 3" description="选择限定词"></el-step>
+            <el-step title="步骤 2" description="文本拆分及限定词选择"></el-step>
         </el-steps>
         <div class="step-content">
             <div v-if="activeStep === 0" class="input-group">
@@ -157,40 +155,39 @@
             </div>
             <div v-if="activeStep === 1">
                 <div class="navigation-buttons" style="margin-top:20px;">
-                    <el-button type="primary" @click="goFirstStep" style="margin-left: 750px;">返回步骤一（文本输入）</el-button>
+                    <el-button type="primary" @click="goFirstStep" style="margin-left: 750px;">返回文本输入</el-button>
                 </div>
-                <p>文本拆分结果:</p>
-                <el-button type="success" @click="copyPageText" style="margin-top: 0px;margin-bottom: 10px;">复制当前页文本</el-button>
-                <div class="display-text">
-                    {{ paginatedText[currentPage] }}
-                </div>
+                <el-button type="success" @click="copyPageText"
+                    style="margin-top: 0px;margin-bottom: 10px;">复制当前页文本</el-button>
                 <div class="pagination">
-                    <button v-for="(item, index) in totalPages" :key="index" :class="{ active: currentPage === index }"
-                        @click="changePage(index)">
-                        {{ index + 1 }}
+                    <button v-if="totalPages > 0" @click="goToFirst" :disabled="currentPage === 0">首页</button>
+                    <button v-if="visiblePages.length && visiblePages[0] > 0" @click="prevPageBlock">«</button>
+                    <button v-for="page in visiblePages" :key="page" :class="{ active: currentPage === page }"
+                        @click="changePage(page)">
+                        {{ page + 1 }}
                     </button>
+                    <button v-if="visiblePages.length && visiblePages[visiblePages.length - 1] < totalPages - 1"
+                        @click="nextPageBlock">»</button>
+                    <button v-if="totalPages > 0" @click="goToLast"
+                        :disabled="currentPage === totalPages - 1">末页</button>
                 </div>
-                <el-button type="primary" @click="nextStep">选择当前段落进入限定词选取</el-button>
-            </div>
-            <div v-if="activeStep === 2">
-                <div class="navigation-buttons" style="margin-top:20px;">
-                    <el-button type="primary" @click="goFirstStep" style="margin-left: 750px;">返回步骤一（文本输入）</el-button>
-                    <el-button type="primary" @click="prevStep" style="margin-left: 0px;">返回上一步（段落选取）</el-button>
-                </div>
-                <el-checkbox v-model="wrapWithBrackets" style="margin-top: 5px;;">是否使用‘[ ]’包裹限定词</el-checkbox>
-                <h3 style="margin-top: 10px;">在以下文本框中使用鼠标划取限定词：</h3>
+                <el-checkbox v-model="wrapWithBrackets" style="margin-top: 5px;">是否使用‘[ ]’包裹限定词</el-checkbox>
+                <h3 style="margin-top: 10px;">请在下面文本框中使用鼠标划取限定词：</h3>
                 <pre id="outputText" @mouseup="extractSelectedText">
 <code v-html="formattedOutputText"></code>
-        </pre>
+          </pre>
                 <div class="selected-text">
                     <h3>划取的内容：</h3>
-                    <el-input  type="text" :value="formattedSelectedText" readonly placeholder="划取的文本将显示在这里"></el-input>
+                    <el-input type="text" :value="formattedSelectedText" readonly placeholder="划取的文本将显示在这里"></el-input>
+                </div>
+                <div class="operate-buttons">
                     <el-button style="margin-top: 5px;" type="success" @click="copyToClipboard">复制限定词结果</el-button>
                     <el-button style="margin-top: 5px;" type="danger" @click="undoSelection">撤销上一个划取</el-button>
                     <el-button style="margin-top: 5px;" type="warning" @click="clearSelections">清空所有划取</el-button>
-                    <el-button style="margin-top: 5px;" v-if="wrapWithBrackets" type="primary" @click="copyFullContent">复制完整内容</el-button>
+                    <el-button v-if="wrapWithBrackets" style="margin-top: 5px;" type="primary"
+                        @click="copyFullContent">复制完整内容</el-button>
                     <div class="count-info">
-                        已划取的限定词数量: {{ selectedCount }}<br>
+                        已划取的限定词数量: {{ selectedCount }}<br />
                         限定词与当前显示文本总长度: {{ totalLength }}
                     </div>
                 </div>
@@ -199,45 +196,69 @@
     </div>
     <script>
         new Vue({
-            el: '#app',
+            el: "#app",
             data() {
                 return {
-                    activeStep: 0,          
-                    inputText: '',          
-                    paginatedText: [],      
-                    currentPage: 0,        
-                    selectedTexts: [],      
-                    wrapWithBrackets: true  
+                    activeStep: 0,
+                    inputText: "",
+                    paginatedText: [],
+                    currentPage: 0,
+                    selectedTexts: [],
+                    wrapWithBrackets: true
                 };
             },
             computed: {
                 totalPages() {
                     return this.paginatedText.length;
                 },
+                visiblePages() {
+                    const maxVisible = 5;
+                    const total = this.totalPages;
+                    const current = this.currentPage;
+                    let start = 0;
+                    let end = total;
+                    if (total > maxVisible) {
+                        if (current < Math.floor(maxVisible / 2)) {
+                            start = 0;
+                            end = maxVisible;
+                        } else if (current > total - Math.ceil(maxVisible / 2)) {
+                            start = total - maxVisible;
+                            end = total;
+                        } else {
+                            start = current - Math.floor(maxVisible / 2);
+                            end = start + maxVisible;
+                        }
+                    }
+                    const pages = [];
+                    for (let i = start; i < end; i++) {
+                        pages.push(i);
+                    }
+                    return pages;
+                },
                 formattedOutputText() {
-                    let text = this.paginatedText[this.currentPage] || '';
+                    let text = this.paginatedText[this.currentPage] || "";
                     this.selectedTexts.forEach(sel => {
                         if (sel) {
-                            const escapedSel = sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                            const re = new RegExp(escapedSel, 'g');
+                            const escapedSel = sel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+                            const re = new RegExp(escapedSel, "g");
                             text = text.replace(re, `<span class="highlight">${sel}</span>`);
                         }
                     });
                     return text;
                 },
                 formattedSelectedText() {
-                    let joinedText = this.selectedTexts.join(' ');
+                    let joinedText = this.selectedTexts.join(" ");
                     return this.wrapWithBrackets ? `[${joinedText}]` : joinedText;
                 },
                 selectedCount() {
                     return this.selectedTexts.length;
                 },
                 totalLength() {
-                    const currentText = this.paginatedText[this.currentPage] || '';
+                    const currentText = this.paginatedText[this.currentPage] || "";
                     let displayedLen = Array.from(currentText).length;
-                    let rawSelected = this.selectedTexts.join(' ');
+                    let rawSelected = this.selectedTexts.join(" ");
                     if (this.wrapWithBrackets) {
-                        rawSelected = '[' + rawSelected + ']';
+                        rawSelected = "[" + rawSelected + "]";
                     }
                     let selectedLen = Array.from(rawSelected).length;
                     return displayedLen + selectedLen;
@@ -250,7 +271,7 @@
                         this.currentPage = 0;
                         this.activeStep = 1;
                     } else {
-                        this.$message.warning('请输入内容');
+                        this.$message.warning("请输入内容");
                     }
                 },
                 splitText(text, maxLength) {
@@ -281,13 +302,33 @@
                     return result;
                 },
                 changePage(index) {
+                    this.selectedTexts = [];
                     this.currentPage = index;
                 },
-                nextStep() {
-                    this.activeStep = 2;
+                prevPageBlock() {
+                    const newPage = this.visiblePages[0] - 1;
+                    if (newPage >= 0) {
+                        this.changePage(newPage);
+                    }
+                },
+                nextPageBlock() {
+                    const newPage = this.visiblePages[this.visiblePages.length - 1] + 1;
+                    if (newPage < this.totalPages) {
+                        this.changePage(newPage);
+                    }
+                },
+                goToFirst() {
+                    if (this.totalPages > 0) {
+                        this.changePage(0);
+                    }
+                },
+                goToLast() {
+                    if (this.totalPages > 0) {
+                        this.changePage(this.totalPages - 1);
+                    }
                 },
                 clearUpload() {
-                    this.inputText = '';
+                    this.inputText = "";
                     this.paginatedText = [];
                     this.selectedTexts = [];
                     this.currentPage = 0;
@@ -309,38 +350,40 @@
                 },
                 copyToClipboard() {
                     const textToCopy = this.formattedSelectedText;
-                    navigator.clipboard.writeText(textToCopy).then(() => {
-                        this.$message.success('复制限定词结果成功！');
-                    }).catch(err => {
-                        console.error('复制失败:', err);
-                        this.$message.error('复制失败，请手动复制。');
-                    });
+                    navigator.clipboard
+                        .writeText(textToCopy)
+                        .then(() => {
+                            this.$message.success("复制限定词结果成功！");
+                        })
+                        .catch(err => {
+                            console.error("复制失败:", err);
+                            this.$message.error("复制失败，请手动复制。");
+                        });
                 },
                 copyFullContent() {
-                    let baseText = this.paginatedText[this.currentPage] || '';
+                    let baseText = this.paginatedText[this.currentPage] || "";
                     let textToCopy = this.formattedSelectedText + baseText;
-                    navigator.clipboard.writeText(textToCopy).then(() => {
-                        this.$message.success('复制完整内容成功！');
-                    }).catch(err => {
-                        console.error('复制失败:', err);
-                        this.$message.error('复制失败，请手动复制。');
-                    });
+                    navigator.clipboard
+                        .writeText(textToCopy)
+                        .then(() => {
+                            this.$message.success("复制完整内容成功！");
+                        })
+                        .catch(err => {
+                            console.error("复制失败:", err);
+                            this.$message.error("复制失败，请手动复制。");
+                        });
                 },
                 copyPageText() {
-                    let pageText = this.paginatedText[this.currentPage] || '';
-                    navigator.clipboard.writeText(pageText).then(() => {
-                        this.$message.success('复制当前页文本成功！');
-                    }).catch(err => {
-                        console.error('复制失败:', err);
-                        this.$message.error('复制失败，请手动复制。');
-                    });
-                },
-                prevStep() {
-                    if (this.activeStep > 0) {
-                        this.activeStep--;
-                    } else {
-                        this.$message.info("已经是第一步");
-                    }
+                    let pageText = this.paginatedText[this.currentPage] || "";
+                    navigator.clipboard
+                        .writeText(pageText)
+                        .then(() => {
+                            this.$message.success("复制当前页文本成功！");
+                        })
+                        .catch(err => {
+                            console.error("复制失败:", err);
+                            this.$message.error("复制失败，请手动复制。");
+                        });
                 },
                 goFirstStep() {
                     this.activeStep = 0;
