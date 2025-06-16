@@ -150,7 +150,7 @@
                     <h3>请输入文本内容：</h3>
                     <el-input type="textarea" placeholder="请输入内容" v-model="inputText" rows="12"></el-input>
                     <el-button type="primary" @click="submitText" style="margin-top: 20px;">提交</el-button>
-                    <el-button type="info" @click="clearUpload" style="margin-top: 20px;">清空上传</el-button>
+                    <el-button type="info" @click="clearUpload" style="margin-top: 20px;">清空</el-button>
                 </div>
             </div>
             <div v-if="activeStep === 1">
@@ -386,6 +386,7 @@
                         });
                 },
                 goFirstStep() {
+                    this.selectedTexts = [];
                     this.activeStep = 0;
                 }
             }
