@@ -54,10 +54,13 @@
             border: none !important;
             border-radius: 4px !important;
             cursor: pointer !important;
-            width: auto !important;
             transition: none !important;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2) !important;
             font-size: 14px !important;
+            margin: 5px;
+            /* 添加外边距以分隔按钮 */
+            width: auto;
+            /* 按钮宽度自动调整 */
         }
 
         button:hover,
@@ -109,13 +112,16 @@
             padding: 10px;
             background-color: #f9f9f9;
             border-radius: 4px;
-            white-space: pre-wrap;
+            white-space: pre-line;
             overflow-y: auto;
             font-family: Microsoft YaHei;
             font-size: 15px;
             line-height: 1.5;
             height: 280px;
             margin-top: 15px;
+            text-indent: 0;
+            margin-left: 0;
+            margin-right: 0;
         }
 
         .highlight {
@@ -133,7 +139,47 @@
         }
 
         .operate-buttons {
+            display: flex;
             margin-top: 10px;
+        }
+
+        .flex-container {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .flex-item {
+            width: 48%;
+            margin-right: 2%;
+        }
+
+        .flex-item:last-child {
+            margin-right: 0;
+        }
+
+        .el-input__inner {
+            padding: 2px !important;
+        }
+
+        .custom-textarea .el-textarea__inner {
+            text-indent: 0 !important;
+            padding: 2px !important;
+            margin: 0 !important;
+            border: 1px solid #dcdfe6 !important;
+            background-color: #f9f9f9 !important;
+            height: 100px !important;
+            border-radius: 4px !important;
+            white-space: pre-wrap;
+            overflow: auto;
+        }
+
+        .custom-input .el-input__inner {
+            text-indent: 0 !important;
+            padding: 2px !important;
+            margin: 0 !important;
+            border: 1px solid #dcdfe6 !important;
+            border-radius: 4px !important;
         }
     </style>
 </head>
@@ -174,25 +220,59 @@
                 <el-checkbox v-model="wrapWithBrackets" style="margin-top: 5px;">是否使用‘[ ]’包裹限定词</el-checkbox>
                 <h3 style="margin-top: 10px;">请在下面文本框中使用鼠标划取限定词：</h3>
                 <pre id="outputText" @mouseup="extractSelectedText">
-<code v-html="formattedOutputText"></code>
-          </pre>
-                <div class="selected-text">
-                    <h3>划取的内容：</h3>
-                    <el-input type="text" :value="formattedSelectedText" readonly placeholder="划取的文本将显示在这里"></el-input>
-                </div>
-                <div class="operate-buttons">
-                    <el-button style="margin-top: 5px;" type="success" @click="copyToClipboard">复制限定词结果</el-button>
-                    <el-button style="margin-top: 5px;" type="danger" @click="undoSelection">撤销上一个划取</el-button>
-                    <el-button style="margin-top: 5px;" type="warning" @click="clearSelections">清空所有划取</el-button>
-                    <el-button v-if="wrapWithBrackets" style="margin-top: 5px;" type="primary"
-                        @click="copyFullContent">复制完整内容</el-button>
-                    <div class="count-info">
-                        已划取的限定词数量: {{ selectedCount }}<br />
-                        限定词与当前显示文本总长度: {{ totalLength }}
+                    <code v-html="formattedOutputText"></code>
+                </pre>
+                <el-button v-if="wrapWithBrackets" type="primary" @click="copyFullContent"
+                    style="background-color: #4cc660 !important;"> 复制完整内容（全文限定词+限定词+文本内容）</el-button>
+                <div class="flex-container">
+                    <div class="flex-item">
+                        <h3 style="margin-top: -5px;">手动输入的全文限定词：</h3>
+                        <el-input type="text" :value="formattedKeywords" readonly
+                            placeholder="输入的全文限定词将显示在这里"></el-input>
+                        <div class="operate-buttons">
+                            <el-button type="info" @click="showDialog" style="margin-top: 20px;">编辑全文限定词</el-button>
+                        </div>
+
                     </div>
+                    <div class="flex-item">
+                        <h3 style="margin-top: -5px;">鼠标划取的限定词：</h3>
+                        <el-input type="text" :value="formattedSelectedText" readonly
+                            placeholder="划取的文本将显示在这里"></el-input>
+                        <div class="operate-buttons">
+                            <el-button type="danger" @click="undoSelection">撤销上一个划取</el-button>
+                            <el-button type="warning" @click="clearSelections">清空所有划取</el-button>
+                        </div>
+                    </div>
+                </div>
+                <div class="count-info">
+                    已划取的限定词数量: {{ selectedCount }}<br />
+                    限定词与当前显示文本总长度: {{ totalLength }}
                 </div>
             </div>
         </div>
+
+        <template>
+            <el-dialog title="编辑全文限定词" :visible.sync="dialogVisible">
+                <div>
+                    <el-button type="primary" @click="handleAddTest" style="margin-bottom: 10px;">辟谣</el-button>
+                    <el-button type="info" @click="addKeywordStructure"
+                        style="margin-bottom: 10px;">添加全文限定词结构体</el-button>
+                    <el-button type="danger" @click="clearAllKeywords" style="margin-bottom: 10px;">清空</el-button>
+                    <div v-for="(keyword, index) in fullKeywords" :key="index" class="keyword-container">
+                        <span>{{ index + 1 }}. </span>
+                        <el-input class="keyword-input" v-model="keyword.text" placeholder="输入全文限定词"></el-input>
+                        <el-checkbox v-model="keyword.negated">否定</el-checkbox>
+                        <el-button type="danger" @click="removeKeyword(index)">删除</el-button>
+                    </div>
+                    <el-input type="textarea" class="custom-textarea" :value="formattedKeywords" readonly
+                        placeholder="拼接结果" rows="5" style="margin-top: 10px;"></el-input>
+                </div>
+                <span slot="footer" class="dialog-footer">
+                    <el-button @click="dialogVisible = false">取消</el-button>
+                    <el-button type="primary" @click="confirmKeywords">确认添加</el-button>
+                </span>
+            </el-dialog>
+        </template>
     </div>
     <script>
         new Vue({
@@ -204,12 +284,27 @@
                     paginatedText: [],
                     currentPage: 0,
                     selectedTexts: [],
-                    wrapWithBrackets: true
+                    includeTest: false,
+                    wrapWithBrackets: true,
+                    dialogVisible: false,
+                    fullKeywords: [],
+                    keywordCounter: 0
                 };
             },
             computed: {
                 totalPages() {
                     return this.paginatedText.length;
+                },
+                formattedKeywords() {
+                    let base = this.fullKeywords.map(keyword => {
+                        return keyword.negated ? `!{${keyword.text}}` : `{${keyword.text}}`;
+                    }).join("");
+                    return this.includeTest ? "!{谣言|谣|辟谣|假的|造谣|虚假|编造}" + base : base;
+                },
+                formattedFullKeyword() {
+                    return this.fullKeywords.map(keyword => {
+                        return keyword.negated ? `!{${keyword.text}}` : `{${keyword.text}}`;
+                    }).join("");
                 },
                 visiblePages() {
                     const maxVisible = 5;
@@ -247,8 +342,11 @@
                     return text;
                 },
                 formattedSelectedText() {
-                    let joinedText = this.selectedTexts.join(" ");
-                    return this.wrapWithBrackets ? `[${joinedText}]` : joinedText;
+                    let joinedText = this.selectedTexts.length > 0 ? `[${this.selectedTexts.join(" ")}]` : "";
+                    return joinedText;
+                },
+                formattedFullKeyword() {
+                    return this.fullKeywords.map(keyword => `{${keyword.text}}`).join(", ");
                 },
                 selectedCount() {
                     return this.selectedTexts.length;
@@ -257,17 +355,40 @@
                     const currentText = this.paginatedText[this.currentPage] || "";
                     let displayedLen = Array.from(currentText).length;
                     let rawSelected = this.selectedTexts.join(" ");
-                    if (this.wrapWithBrackets) {
-                        rawSelected = "[" + rawSelected + "]";
+                    let selectedLen = 0;
+                    if (this.selectedTexts.length > 0) {
+                        selectedLen = Array.from(`[${rawSelected}]`).length;
                     }
-                    let selectedLen = Array.from(rawSelected).length;
-                    return displayedLen + selectedLen;
+                    const fullKeywordLength = Array.from(this.formattedKeywords).length;
+                    return displayedLen + selectedLen + fullKeywordLength;
                 }
             },
             methods: {
+                clearAllKeywords() {
+                    this.fullKeywords = [];
+                    this.includeTest = false;
+                },
+                handleAddTest() {
+                    this.includeTest = true;
+                },
+                addKeywordStructure() {
+                    this.keywordCounter++;
+                    this.fullKeywords.push({ id: this.keywordCounter, text: "", negated: false });
+                },
+                removeKeyword(index) {
+                    this.fullKeywords.splice(index, 1);
+                },
+                confirmKeywords() {
+                    const emptyKeyword = this.fullKeywords.some(keyword => !keyword.text.trim());
+                    if (emptyKeyword) {
+                        this.$message.error("存在未输入内容的全文限定词结构体，请检查后再提交！");
+                        return;
+                    }
+                    this.dialogVisible = false;
+                },
                 submitText() {
                     if (this.inputText) {
-                        this.paginatedText = this.splitText(this.inputText, 470);
+                        this.paginatedText = this.splitText(this.inputText, 470).map(text => text.trimStart());
                         this.currentPage = 0;
                         this.activeStep = 1;
                     } else {
@@ -278,24 +399,27 @@
                     const result = [];
                     const sentenceEndRegex = /[。！？.?!]/;
                     let start = 0;
+
                     while (start < text.length) {
                         if (text.length - start <= maxLength) {
-                            result.push(text.slice(start));
+                            result.push(text.slice(start).trimStart());
                             break;
                         }
                         let subStr = text.slice(start, start + maxLength);
                         let splitPos = -1;
+
                         for (let i = subStr.length - 1; i >= 0; i--) {
                             if (sentenceEndRegex.test(subStr[i])) {
                                 splitPos = i;
                                 break;
                             }
                         }
+
                         if (splitPos === -1) {
-                            result.push(subStr);
+                            result.push(subStr.trimStart());
                             start += maxLength;
                         } else {
-                            result.push(text.slice(start, start + splitPos + 1));
+                            result.push(text.slice(start, start + splitPos + 1).trimStart());
                             start += splitPos + 1;
                         }
                     }
@@ -303,6 +427,8 @@
                 },
                 changePage(index) {
                     this.selectedTexts = [];
+                    this.fullKeywords = [];
+                    this.includeTest = false;
                     this.currentPage = index;
                 },
                 prevPageBlock() {
@@ -329,6 +455,8 @@
                 },
                 clearUpload() {
                     this.inputText = "";
+                    this.fullKeywords = [];
+                    this.includeTest = false;
                     this.paginatedText = [];
                     this.selectedTexts = [];
                     this.currentPage = 0;
@@ -362,7 +490,7 @@
                 },
                 copyFullContent() {
                     let baseText = this.paginatedText[this.currentPage] || "";
-                    let textToCopy = this.formattedSelectedText + baseText;
+                    let textToCopy = `${this.formattedKeywords}${this.formattedSelectedText}${baseText}`;
                     navigator.clipboard
                         .writeText(textToCopy)
                         .then(() => {
@@ -387,10 +515,16 @@
                 },
                 goFirstStep() {
                     this.selectedTexts = [];
+                    this.fullKeywords = [];
+                    this.includeTest = false;
                     this.activeStep = 0;
+                },
+                showDialog() {
+                    this.dialogVisible = true;
                 }
             }
         });
+
     </script>
 </body>
 
