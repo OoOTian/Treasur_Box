@@ -70,7 +70,10 @@
             border: 1px solid #ccc;
             border-radius: 4px;
             min-height: 100px;
+            max-height: 200px;
             background: #f9f9f9;
+            overflow-y: auto;
+            white-space: pre-wrap;
         }
 
         .checkbox-group {
@@ -143,6 +146,7 @@
                 inputText: '',
                 outputText: '',
                 options: [
+                    { name: '抽帧图片', checked: true },
                     { name: '剔除', checked: true },
                     { name: '保留', checked: true },
                     { name: '图片消重库', checked: true }
@@ -217,7 +221,7 @@
             },
             created() {
                 this.options.forEach(option => {
-                    option.checked = option.name !== '剔除' && option.name !== '保留' && option.name !== '图片消重库' ? false : true;
+                    option.checked = option.name !== '剔除' && option.name !== '保留' && option.name !== '抽帧图片' && option.name !== '图片消重库' ? false : true;
                 });
             }
         });
