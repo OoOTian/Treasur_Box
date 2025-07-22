@@ -128,7 +128,9 @@
         <button @click="processInput" style="width: 100px;height: 35px;">处理文本</button>
         <div id="output">{{ outputText }}</div>
         <button @click="copyOutput" style="margin-top: 20px;height: 35px;">复制输出内容</button>
-
+        <div :style="{ color: outputLength > 500 ? 'red' : 'green', marginTop: '5px', fontWeight: 'bold' }">
+            文本长度：{{ outputLength }}
+        </div>
         <div class="modal" :class="{ 'active': isModalVisible }" @click="hideModal">
             <div class="modal-content" @click.stop>
                 <h3>添加新选项</h3>
@@ -154,6 +156,11 @@
                 newOptionName: '',
                 isModalVisible: false,
                 allSelected: true
+            },
+            computed: {
+                outputLength() {
+                    return this.outputText.length;
+                }
             },
             methods: {
                 processInput() {
